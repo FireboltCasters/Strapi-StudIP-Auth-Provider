@@ -1,0 +1,42 @@
+version: '3'
+services:
+  nginx:
+    container_name: nginx
+    # to get latest nginx use:
+   #image: nginx:stable
+    image: nginx:1.20.1
+    volumes:
+      - ${CERT_FOLDER_PATH}/fullchain.pem:/etc/certificates/fullchaim.pem
+      - ${CERT_FOLDER_PATH}/privkey.pem:/etc/certificates/privkey.pem
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/proxy.conf:/etc/nginx/templates/proxy.conf.template
+    env_file: .env
+    environment:
+      DOMAIN_PATH: ${DOMAIN_PATH}
+      DOMAIN: ${DOMAIN}
+      BACKEND_PORT: ${BACKEND_PORT}
+    ports:
+      - 80:80
+      - 443:443
+    restart: always
+  cleanup:
+    image: alpine
+    volumes:
+      - ./app:/srv/app
+    command: >
+      sh -c "echo 'Clean Up Build Folder' && cd /srv/app/ && ls && rm -rf ./build"
+  strapi:
+    restart: always
+    env_file: .env
+    environment:
+       DOMAIN_PATH: ${DOMAIN_PATH}
+       DOMAIN: https://${DOMAIN}
+    # to get latest strapi use: 
+   #image: strapi/strapi
+    image: strapi/strapi:3.6.8
+    volumes:
+      - ./app:/srv/app
+    expose:
+      - ${BACKEND_PORT}
+    depends_on:
+      - cleanup
